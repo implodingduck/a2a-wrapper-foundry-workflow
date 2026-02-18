@@ -13,7 +13,7 @@ from a2a.types import (
     AgentSkill,
     APIKeySecurityScheme
 )
-from agent_executor import (
+from .agent_executor import (
     FoundryWorkflowAgentExecutor,  # type: ignore[import-untyped]
 )
 
