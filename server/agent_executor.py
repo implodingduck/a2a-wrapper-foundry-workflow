@@ -109,7 +109,9 @@ class FoundryWorkflowAgent:
             print("Conversation deleted")
 
         # Return the full response text
-        return ''.join(full_response) if full_response else f'Workflow completed for: {text}'
+        retval = ''.join(full_response) if full_response else f'Workflow completed for: {text}'
+        print(f"Returning from FoundryWorkflowAgent.invoke(\"{text}\"):\n\n{retval}")
+        return retval
 
 
 class FoundryWorkflowAgentExecutor(AgentExecutor):
