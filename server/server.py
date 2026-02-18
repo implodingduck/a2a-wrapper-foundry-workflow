@@ -13,8 +13,8 @@ from a2a.types import (
     AgentSkill,
     APIKeySecurityScheme
 )
-from .agent_executor import (
-    EchoAgentExecutor,  # type: ignore[import-untyped]
+from agent_executor import (
+    FoundryWorkflowAgentExecutor,  # type: ignore[import-untyped]
 )
 
 
@@ -84,7 +84,7 @@ if __name__ == '__main__':
     )
 
     request_handler = DefaultRequestHandler(
-        agent_executor=EchoAgentExecutor(),
+        agent_executor=FoundryWorkflowAgentExecutor(),
         task_store=InMemoryTaskStore(),
     )
 

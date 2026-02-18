@@ -24,7 +24,7 @@ async def main() -> None:
 
     base_url = 'http://localhost:8000'
 
-    async with httpx.AsyncClient() as httpx_client:
+    async with httpx.AsyncClient(timeout=30) as httpx_client:
         # Initialize A2ACardResolver
         resolver = A2ACardResolver(
             httpx_client=httpx_client,
@@ -111,25 +111,25 @@ async def main() -> None:
         # Create a Message object directly
         message = Message(
             role='user',
-            parts=[{'kind': 'text', 'text': 'how much is 10 USD in INR?'}],
+            parts=[{'kind': 'text', 'text': 'What is the current stock price of MSFT?'}],
             message_id=uuid4().hex,
         )
 
         # send_message takes a Message directly and returns an async generator
         async for response in client.send_message(message):
-            print(response)
+           print(response)
         # --8<-- [end:send_message]
 
         # --8<-- [start:send_message_streaming]
         # Same API for both streaming and non-streaming
-        message2 = Message(
-            role='user',
-            parts=[{'kind': 'text', 'text': 'what is the weather today?'}],
-            message_id=uuid4().hex,
-        )
+        # message2 = Message(
+        #     role='user',
+        #     parts=[{'kind': 'text', 'text': 'what is the weather today?'}],
+        #     message_id=uuid4().hex,
+        # )
 
-        async for chunk in client.send_message(message2):
-            print(chunk)
+        # async for chunk in client.send_message(message2):
+        #     print(chunk)
         # --8<-- [end:send_message_streaming]
 
 

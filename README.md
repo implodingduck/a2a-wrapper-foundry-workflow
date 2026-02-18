@@ -1,3 +1,3 @@
-# generic-a2a-wrapper
+# A2A Wrapper Foundry Workflow
 
-Basic A2A echo agent that can be used as a starting point for other A2A servers
+Generic A2A wrapper to call a Microsoft Foundry Workflow
