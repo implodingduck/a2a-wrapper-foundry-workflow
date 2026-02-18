@@ -55,18 +55,18 @@ api_key = os.getenv('API_KEY', '')
 if __name__ == '__main__':
     # --8<-- [start:AgentSkill]
     skill = AgentSkill(
-        id='echo',
-        name='Echo Skill',
-        description='Echoes the input text',
-        tags=['echo', 'test'],
-        examples=['hi', 'hello world'],
+        id='foundry_workflow_skill',
+        name='Foundry Workflow Skill',
+        description='Handles Foundry workflow tasks',
+        tags=['foundry', 'workflow'],
+        examples=['start workflow', 'check workflow status'],
     )
 
     # --8<-- [start:AgentCard]
     # This will be the public-facing agent card
     public_agent_card = AgentCard(
-        name='Echo Agent',
-        description='Just an echo agent',
+        name='Foundry Workflow Agent',
+        description='Handles Foundry workflow tasks',
         url=f'{url}',
         version='1.0.0',
         default_input_modes=['text'],
