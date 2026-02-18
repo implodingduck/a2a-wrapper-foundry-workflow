@@ -61,7 +61,7 @@ class FoundryWorkflowAgent:
     async def invoke(self, text: str) -> str:
         print(f'FoundryWorkflowAgent received input: {text}')
         project_client = AIProjectClient(
-            endpoint="https://ekas-2476-resource.services.ai.azure.com/api/projects/ekas-2476",
+            endpoint=os.environ.get('FOUNDRY_WORKFLOW_ENDPOINT'),
             credential=DefaultAzureCredential(),
         )
         
@@ -70,8 +70,8 @@ class FoundryWorkflowAgent:
         with project_client:
 
             workflow = {
-                "name": "etf-deep-research-workflow",
-                "version": "1",
+                "name": os.environ.get('FOUNDRY_WORKFLOW_NAME'),
+                "version": os.environ.get('FOUNDRY_WORKFLOW_VERSION', '1'),
             }
             
             openai_client = project_client.get_openai_client()
