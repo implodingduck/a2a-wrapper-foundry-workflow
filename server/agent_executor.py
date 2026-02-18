@@ -17,17 +17,17 @@ class FoundryWorkflowAgent:
         tool_approvals = []
 
         for event in stream:
-            print("-------------------------------")
-            if event.type == ResponseStreamEventType.RESPONSE_OUTPUT_TEXT_DONE:
-                print("\t", event.text)
-            elif event.type == ResponseStreamEventType.RESPONSE_OUTPUT_ITEM_ADDED and event.item.type == "workflow_action":
-                print(f"********************************\nActor - '{event.item.action_id}' :")
-            elif event.type == ResponseStreamEventType.RESPONSE_OUTPUT_ITEM_ADDED and event.item.type == "workflow_action":
-                print(f"Workflow Item '{event.item.action_id}' is '{event.item.status}' - (previous item was : '{event.item.previous_action_id}')")
-            elif event.type == ResponseStreamEventType.RESPONSE_OUTPUT_ITEM_DONE and event.item.type == "workflow_action":
-                print(f"Workflow Item '{event.item.action_id}' is '{event.item.status}' - (previous item was: '{event.item.previous_action_id}')")
-            elif event.type == ResponseStreamEventType.RESPONSE_OUTPUT_TEXT_DELTA:
-                print(f"\tDelta : {event.delta}")
+            #print("-------------------------------")
+            # if event.type == ResponseStreamEventType.RESPONSE_OUTPUT_TEXT_DONE:
+            #     print("\t", event.text)
+            # elif event.type == ResponseStreamEventType.RESPONSE_OUTPUT_ITEM_ADDED and event.item.type == "workflow_action":
+            #     print(f"********************************\nActor - '{event.item.action_id}' :")
+            # elif event.type == ResponseStreamEventType.RESPONSE_OUTPUT_ITEM_ADDED and event.item.type == "workflow_action":
+            #     print(f"Workflow Item '{event.item.action_id}' is '{event.item.status}' - (previous item was : '{event.item.previous_action_id}')")
+            # elif event.type == ResponseStreamEventType.RESPONSE_OUTPUT_ITEM_DONE and event.item.type == "workflow_action":
+            #     print(f"Workflow Item '{event.item.action_id}' is '{event.item.status}' - (previous item was: '{event.item.previous_action_id}')")
+            if event.type == ResponseStreamEventType.RESPONSE_OUTPUT_TEXT_DELTA:
+                #print(f"\tDelta : {event.delta}")
                 full_response.append(event.delta)
             
             elif event.type == ResponseStreamEventType.RESPONSE_OUTPUT_ITEM_DONE and event.item.type == "mcp_approval_request":
@@ -67,11 +67,11 @@ class FoundryWorkflowAgent:
                             await self.handle_stream(approval_response, conversation, full_response, openai_client, workflow)
                         except Exception as e:
                             print(f"Second attempt failed: {e}")
-                else:
-                    print(f"Final response: {event.response.content if hasattr(event, 'response') and hasattr(event.response, 'content') else event}")
+                #else:
+                #    print(f"Final response: {event.response.content if hasattr(event, 'response') and hasattr(event.response, 'content') else event}")
             
-            else:
-                print(f"Unknown event [{event.type} | {event.item.type if hasattr(event, 'item') and event.item else 'N/A'}]: {event}")
+            # else:
+            #     print(f"Unknown event [{event.type} | {event.item.type if hasattr(event, 'item') and event.item else 'N/A'}]: {event}")
     
     async def invoke(self, text: str) -> str:
         print(f'FoundryWorkflowAgent received input: {text}')
@@ -110,7 +110,7 @@ class FoundryWorkflowAgent:
 
         # Return the full response text
         retval = ''.join(full_response) if full_response else f'Workflow completed for: {text}'
-        print(f"Returning from FoundryWorkflowAgent.invoke(\"{text}\"):\n\n{retval}")
+        print(f"--------------------\nReturning from FoundryWorkflowAgent.invoke(\"{text}\"):\n\n{retval}\n--------------------\n")
         return retval
 
 
