@@ -47,7 +47,11 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
                 status_code=403,
                 content={"error": "Forbidden", "message": "Invalid API key"}
             )
-        
+        # Print out all the details, headers, body, etc. for debugging
+        print(f"Authenticated request to {request.url.path} with method {request.method}")
+        print(f"Headers: {request.headers}")
+        body = await request.body()
+        print(f"Body: {body.decode('utf-8') if body else 'No body'}")
         return await call_next(request)
 
 

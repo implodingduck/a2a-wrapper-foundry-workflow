@@ -114,7 +114,7 @@ async def main() -> None:
         # Create a Message object directly
         message = Message(
             role='user',
-            parts=[{'kind': 'text', 'text': 'Which stock is higher between MSFT and APPL?'}],
+            parts=[{'kind': 'text', 'text': 'Which stock is higher between MSFT and AAPL?'}],
             message_id=uuid4().hex,
         )
 
