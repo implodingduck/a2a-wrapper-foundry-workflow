@@ -16,6 +16,9 @@ from a2a.types import (
 from .agent_executor import (
     FoundryWorkflowAgentExecutor,  # type: ignore[import-untyped]
 )
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 class APIKeyAuthMiddleware(BaseHTTPMiddleware):

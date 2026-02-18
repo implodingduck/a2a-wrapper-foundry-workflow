@@ -23,3 +23,7 @@ variable "FOUNDRY_WORKFLOW_NAME" {
 variable "FOUNDRY_WORKFLOW_VERSION" {
   type = string
 }
+
+variable "FOUNDRY_RESOURCE_ID" {
+  type = string
+}

@@ -148,6 +148,12 @@ resource "azurerm_role_assignment" "containerapptokv" {
   principal_id         = azurerm_user_assigned_identity.this.principal_id
 }
 
+resource "azurerm_role_assignment" "containerapptofoundry" {
+  scope                = var.FOUNDRY_RESOURCE_ID
+  role_definition_name = "Azure AI User"
+  principal_id         = azurerm_user_assigned_identity.this.principal_id
+}
+
 resource "azurerm_role_assignment" "reader" {
   scope                = "/subscriptions/${data.azurerm_client_config.current.subscription_id}"
   role_definition_name = "Reader"
@@ -190,6 +196,19 @@ resource "azurerm_container_app" "a2a" {
       cpu    = 0.25
       memory = "0.5Gi"
 
+      env {
+        name  = "AZURE_SUBSCRIPTION_ID"
+        value = data.azurerm_client_config.current.subscription_id
+      }
+      env {
+        name  = "AZURE_TENANT_ID"
+        value = data.azurerm_client_config.current.tenant_id
+
+      }
+      env {
+        name  = "AZURE_CLIENT_ID"
+        value = azurerm_user_assigned_identity.this.client_id
+      }
       env {
         name  = "FOUNDRY_WORKFLOW_ENDPOINT"
         value = var.FOUNDRY_WORKFLOW_ENDPOINT
