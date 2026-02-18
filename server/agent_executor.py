@@ -3,6 +3,7 @@ from a2a.server.events import EventQueue
 from a2a.utils import new_agent_text_message, get_message_text
 
 import os
+import time
 from azure.identity import DefaultAzureCredential
 from azure.ai.projects import AIProjectClient
 from azure.ai.projects.models import ResponseStreamEventType
@@ -43,15 +44,29 @@ class FoundryWorkflowAgent:
                 print("Workflow completed!")
                 if len(tool_approvals) > 0:
                     print(f"Sending tool approvals: {tool_approvals}")
-                    
-                    # Approve the MCP tool request by creating a new response
-                    approval_response = openai_client.responses.create(
-                        conversation=conversation.id,
-                        extra_body={"agent": {"name": workflow["name"], "type": "agent_reference"}},
-                        input=tool_approvals,
-                        stream=True
-                    )
-                    await self.handle_stream(approval_response, conversation, full_response, openai_client, workflow)
+                    try:
+                        # Approve the MCP tool request by creating a new response
+                        approval_response = openai_client.responses.create(
+                            conversation=conversation.id,
+                            extra_body={"agent": {"name": workflow["name"], "type": "agent_reference"}},
+                            input=tool_approvals,
+                            stream=True
+                        )
+                        await self.handle_stream(approval_response, conversation, full_response, openai_client, workflow)
+                    except Exception as e:
+                        print(f"Error sending tool approval response: {e}")
+                        print(f"Trying again in 3 seconds...")
+                        time.sleep(3)  # Wait before retrying
+                        try:
+                            approval_response = openai_client.responses.create(
+                                conversation=conversation.id,
+                                extra_body={"agent": {"name": workflow["name"], "type": "agent_reference"}},
+                                input=tool_approvals,
+                                stream=True
+                            )
+                            await self.handle_stream(approval_response, conversation, full_response, openai_client, workflow)
+                        except Exception as e:
+                            print(f"Second attempt failed: {e}")
                 else:
                     print(f"Final response: {event.response.content if hasattr(event, 'response') and hasattr(event.response, 'content') else event}")
             
