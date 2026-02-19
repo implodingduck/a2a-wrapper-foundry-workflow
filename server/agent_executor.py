@@ -1,5 +1,11 @@
+from multiprocessing import context
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
+from a2a.types import (
+    Task,
+    TaskState,
+    TaskStatus
+)
 from a2a.utils import new_agent_text_message, get_message_text
 
 import os
@@ -126,9 +132,25 @@ class FoundryWorkflowAgentExecutor(AgentExecutor):
         event_queue: EventQueue,
     ) -> None:
         raw_text = get_message_text(context.message) if context.message else ''
+
+         # TODO inspect and return "metadata":{ "copilotstudio.microsoft.com/a2a/chathistory"....} to reconstruct conversation history in the agent.invoke method for better context handling in the workflow
+
         # The agent.invoke now handles streaming events to event_queue
         result = await self.agent.invoke(raw_text)
-        await event_queue.enqueue_event(new_agent_text_message(result))
+
+        history = []
+        if context.message:
+            history.append(context.message)
+        history.append(new_agent_text_message(result))
+        completed_task = Task(
+                id=context.task_id,
+                context_id=context.context_id,
+                status=TaskStatus(state=TaskState.completed),
+                history=history
+        )
+
+        
+        await event_queue.enqueue_event(completed_task)
 
 
     async def cancel(
