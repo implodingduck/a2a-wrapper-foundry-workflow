@@ -94,7 +94,7 @@ class FoundryWorkflowAgent:
                 "name": os.environ.get('FOUNDRY_WORKFLOW_NAME'),
                 "version": os.environ.get('FOUNDRY_WORKFLOW_VERSION', '1'),
             }
-            
+            print(f"Using workflow: {workflow}")
             openai_client = project_client.get_openai_client()
 
             conversation = openai_client.conversations.create()
