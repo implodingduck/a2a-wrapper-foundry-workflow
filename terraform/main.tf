@@ -193,8 +193,8 @@ resource "azurerm_container_app" "a2a" {
     container {
       name   = "a2a"
       image  = "ghcr.io/${var.gh_repo}:latest"
-      cpu    = 0.25
-      memory = "0.5Gi"
+      cpu    = 0.5
+      memory = "1.0Gi"
 
       env {
         name  = "AZURE_SUBSCRIPTION_ID"
