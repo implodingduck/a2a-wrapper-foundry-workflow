@@ -1,4 +1,5 @@
 import os
+import logging
 import uvicorn
 
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -19,6 +20,20 @@ from .agent_executor import (
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# Configure logging to output to console
+logging.basicConfig(
+    level=logging.WARNING,  # Set default logging level to WARNING
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+    ]
+)
+
+# Configure logging for specific modules
+logger = logging.getLogger(__name__)
+
+logging.getLogger('server.agent_executor').setLevel(logging.INFO)
 
 
 class APIKeyAuthMiddleware(BaseHTTPMiddleware):
@@ -48,10 +63,10 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
                 content={"error": "Forbidden", "message": "Invalid API key"}
             )
         # Print out all the details, headers, body, etc. for debugging
-        print(f"Authenticated request to {request.url.path} with method {request.method}")
-        print(f"Headers: {request.headers}")
+        logging.info(f"Authenticated request to {request.url.path} with method {request.method}")
+        logging.info(f"Headers: {request.headers}")
         body = await request.body()
-        print(f"Body: {body.decode('utf-8') if body else 'No body'}")
+        logging.info(f"Body: {body.decode('utf-8') if body else 'No body'}")
         return await call_next(request)
 
 
