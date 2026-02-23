@@ -34,6 +34,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 logging.getLogger('server.agent_executor').setLevel(logging.INFO)
+logging.getLogger('app.agent_executor').setLevel(logging.INFO)
 
 
 class APIKeyAuthMiddleware(BaseHTTPMiddleware):
