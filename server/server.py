@@ -64,10 +64,10 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
                 content={"error": "Forbidden", "message": "Invalid API key"}
             )
         # Print out all the details, headers, body, etc. for debugging
-        logging.info(f"Authenticated request to {request.url.path} with method {request.method}")
-        logging.info(f"Headers: {request.headers}")
+        logging.warning(f"Authenticated request to {request.url.path} with method {request.method}")
+        logging.warning(f"Headers: {request.headers}")
         body = await request.body()
-        logging.info(f"Body: {body.decode('utf-8') if body else 'No body'}")
+        logging.warning(f"Body: {body.decode('utf-8') if body else 'No body'}")
         return await call_next(request)
 
 
