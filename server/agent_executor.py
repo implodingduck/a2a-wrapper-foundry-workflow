@@ -211,18 +211,38 @@ class StreamingFoundryWorkflowAgent:
                     print(f"Workflow completed! [{event.type} | {event.item.type if hasattr(event, 'item') and event.item else 'N/A'}]")
                     if len(tool_approvals) > 0:
                         print(f"Sending tool approvals: {tool_approvals}")
-                        stream = openai_client.responses.create(
-                            conversation=conversation.id,
-                            extra_body={"agent": {"name": workflow["name"], "type": "agent_reference"}},
-                            input=tool_approvals,
-                            stream=True
-                        )
-                        yield {
-                            'is_task_complete': False, 
-                            'metadata': "Approving tools..."
-                        }
-                        continue
+                        try:
+                            stream = openai_client.responses.create(
+                                conversation=conversation.id,
+                                extra_body={"agent": {"name": workflow["name"], "type": "agent_reference"}},
+                                input=tool_approvals,
+                                stream=True
+                            )
+                            yield {
+                                'is_task_complete': False, 
+                                'metadata': "Approving tools..."
+                            }
+                            continue
+                        except Exception as e:
+                            print(f"Error sending tool approval response: {e}")
+                            print(f"Trying again in 3 seconds...")
+                            time.sleep(3)  # Wait before retrying
+                            try:
+                                stream = openai_client.responses.create(
+                                    conversation=conversation.id,
+                                    extra_body={"agent": {"name": workflow["name"], "type": "agent_reference"}},
+                                    input=tool_approvals,
+                                    stream=True
+                                )
+                                yield {
+                                    'is_task_complete': False, 
+                                    'metadata': "Approving tools..."
+                                }
+                                continue
+                            except Exception as e:
+                                print(f"Second attempt failed: {e}")
                     else:
+                        
                         parts = [{'type': 'text', 'text': f"{''.join(full_response) if full_response else f''}"}]
                         yield {
                             'is_task_complete': True, 
@@ -246,15 +266,17 @@ class FoundryWorkflowAgentExecutor(AgentExecutor):
     ) -> None:
         raw_text = get_message_text(context.message) if context.message else ''
         task = context.current_task
+        task_id = context.task_id
+        context_id = context.context_id
         if not task and raw_text != '':
             print("Creating a new task for the agent execution")
             task = new_task(context.message)
             await event_queue.enqueue_event(task)
 
-        updater = TaskUpdater(event_queue, task.id, task.context_id)
+        updater = TaskUpdater(event_queue, task_id, context_id)
 
         try:
-            async for item in self.agent.stream(raw_text, task.context_id):
+            async for item in self.agent.stream(raw_text, context_id):
                 is_task_complete = item['is_task_complete']
                 if not is_task_complete:
                     print(f"Updating task status for item: {item}")
@@ -262,12 +284,13 @@ class FoundryWorkflowAgentExecutor(AgentExecutor):
                         TaskState.working,
                         new_agent_text_message(
                             item['metadata'],
-                            task.context_id,
-                            task.id,
+                            context_id,
+                            task_id,
                         ),
                     )
                 else:
                     parts = item['parts']
+                    print(f"Task is complete, adding artifact for parts: {parts}")
                     await updater.add_artifact(parts)
                     await updater.complete()
                     break
