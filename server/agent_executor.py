@@ -1,4 +1,7 @@
-from multiprocessing import context
+from collections.abc import AsyncIterable
+from typing import Any
+
+from a2a.server.tasks import TaskUpdater
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
 from a2a.types import (
@@ -6,7 +9,7 @@ from a2a.types import (
     TaskState,
     TaskStatus
 )
-from a2a.utils import new_agent_text_message, get_message_text
+from a2a.utils import new_agent_text_message, get_message_text, new_task
 
 import os
 import time
@@ -143,11 +146,98 @@ class FoundryWorkflowAgent:
         return retval
 
 
+
+class StreamingFoundryWorkflowAgent:
+    
+    async def handle_stream(self, stream, conversation, openai_client, workflow):
+        parts = [{'type': 'text', 'text': "Hello world!"}]
+        yield {
+            'is_task_complete': True, 
+            'parts': parts
+        }
+
+    
+    async def stream(self, query, session_id):
+        print(f'FoundryWorkflowAgent received input: {query}')
+        project_client = AIProjectClient(
+            endpoint=os.environ.get('FOUNDRY_WORKFLOW_ENDPOINT'),
+            credential=DefaultAzureCredential(),
+        )
+        with project_client:
+
+            workflow = {
+                "name": os.environ.get('FOUNDRY_WORKFLOW_NAME'),
+                "version": os.environ.get('FOUNDRY_WORKFLOW_VERSION', '1'),
+            }
+            print(f"Using workflow: {workflow}")
+            openai_client = project_client.get_openai_client()
+
+            conversation = openai_client.conversations.create()
+            print(f"Created conversation (id: {conversation.id})")
+
+            stream = openai_client.responses.create(
+                conversation=conversation.id,
+                extra_body={"agent": {"name": workflow["name"], "type": "agent_reference"}},
+                input=f"{query} ... The current date and time is {time.strftime('%Y-%m-%d %H:%M:%S')}",
+                stream=True,
+                metadata={"x-ms-debug-mode-enabled": "1"},
+            )
+       
+            #yield self.handle_stream(stream, conversation, openai_client, workflow)
+            tool_approvals = []
+            full_response = []
+            for event in stream:
+                if event.type == ResponseStreamEventType.RESPONSE_OUTPUT_TEXT_DELTA:
+                    # print(f"\tDelta : {event.delta}")
+                    # parts = [{'type': 'text', 'text': f"{event.delta}"}]
+                    # yield {
+                    #     'is_task_complete': False,
+                    #     'parts': parts,
+                    #     'metadata': 'text_delta'
+                    # }
+                    full_response.append(f"{event.delta}")
+                    continue
+                
+                elif event.type == ResponseStreamEventType.RESPONSE_OUTPUT_ITEM_DONE and event.item.type == "mcp_approval_request":
+                    print(f"Approval request for item '{event.item.id}' with arguments: {event.item.arguments}")
+
+                    tool_approvals.append({
+                        "type": "mcp_approval_response",
+                        "approve": True,  # Change to False to reject
+                        "approval_request_id": event.item.id,
+                    })
+
+                elif event.type == ResponseStreamEventType.RESPONSE_COMPLETED:
+                    print(f"Workflow completed! [{event.type} | {event.item.type if hasattr(event, 'item') and event.item else 'N/A'}]")
+                    if len(tool_approvals) > 0:
+                        print(f"Sending tool approvals: {tool_approvals}")
+                        stream = openai_client.responses.create(
+                            conversation=conversation.id,
+                            extra_body={"agent": {"name": workflow["name"], "type": "agent_reference"}},
+                            input=tool_approvals,
+                            stream=True
+                        )
+                        yield {
+                            'is_task_complete': False, 
+                            'metadata': "Approving tools..."
+                        }
+                        continue
+                    else:
+                        parts = [{'type': 'text', 'text': f"{''.join(full_response) if full_response else f''}"}]
+                        yield {
+                            'is_task_complete': True, 
+                            'parts': parts
+                        }
+                        continue
+
+
+            
+
 class FoundryWorkflowAgentExecutor(AgentExecutor):
     """Foundry Workflow Agent Executor."""
 
     def __init__(self):
-        self.agent = FoundryWorkflowAgent()
+        self.agent = StreamingFoundryWorkflowAgent()
 
     async def execute(
         self,
@@ -155,26 +245,37 @@ class FoundryWorkflowAgentExecutor(AgentExecutor):
         event_queue: EventQueue,
     ) -> None:
         raw_text = get_message_text(context.message) if context.message else ''
+        task = context.current_task
+        if not task and raw_text != '':
+            print("Creating a new task for the agent execution")
+            task = new_task(context.message)
+            await event_queue.enqueue_event(task)
 
-         # TODO inspect and return "metadata":{ "copilotstudio.microsoft.com/a2a/chathistory"....} to reconstruct conversation history in the agent.invoke method for better context handling in the workflow
+        updater = TaskUpdater(event_queue, task.id, task.context_id)
 
-        # The agent.invoke now handles streaming events to event_queue
-        result = await self.agent.invoke(raw_text)
-        print(f"Agent result length: {len(result)}")
-        history = []
-        if context.message:
-            history.append(context.message)
-        history.append(new_agent_text_message(result))
-        completed_task = Task(
-                id=context.task_id,
-                context_id=context.context_id,
-                status=TaskStatus(state=TaskState.input_required),
-                history=history
-        )
+        try:
+            async for item in self.agent.stream(raw_text, task.context_id):
+                is_task_complete = item['is_task_complete']
+                if not is_task_complete:
+                    print(f"Updating task status for item: {item}")
+                    await updater.update_status(
+                        TaskState.working,
+                        new_agent_text_message(
+                            item['metadata'],
+                            task.context_id,
+                            task.id,
+                        ),
+                    )
+                else:
+                    parts = item['parts']
+                    await updater.add_artifact(parts)
+                    await updater.complete()
+                    break
 
-        
-        await event_queue.enqueue_event(completed_task)
+        except Exception as e:
+            print(f"Error during agent execution: {e}")
 
+    
 
     async def cancel(
         self, context: RequestContext, event_queue: EventQueue
